@@ -1,0 +1,33 @@
+##Queue States & Dequeue Order- 
+Queue after enqueue(A): Front -> [A] <- Rear
+Queue after enqueue(B): Front -> [A, B] <- Rear
+Queue after enqueue(C): Front -> [A, B, C] <- Rear
+
+Order of three dequeue:
+  1st dequeue(): A 
+  remaining queue: [B, C]
+  2nd dequeue(): B 
+  remaining queue: [C]
+  3rd dequeue(): C 
+  remaining queue: []
+  Final dequeue order: A, B, C
+
+##Four-Step Edit History Trace Table:
+Initial state: Undo = [], Redo = [], Active edits = none
+
+Step | Operation | Undo                | Redo                | Active edits
+-----|-----------|---------------------|---------------------|-------------
+1    | Edit(X)   | [X]                 | []                  | X
+2    | Edit(Y)   | [X, Y]              | []                  | X, Y
+3    | Undo()    | [X]                 | [Y]                 | X
+4    | Edit(Z)   | [X, Z]              | []                  | X, Z
+
+Explanation of Redo(Y):
+ Right after Step 3 (Undo()), Y is on top of the Redo stack (Redo = [Y]), so calling Redo() at that point would restore Y back into Undo ([X, Y]) and active edits (X, Y).
+ After Step 4 (Edit(Z)), performing a new edit branches the history and clears the Redo stack (Redo = []). Because Y is removed from Redo, Redo(Y) can no longer be performed.
+
+##Precise Deduplication Rule- 
+Stable Identifier: Assign each job a unique key / job_id generated once at creation. When job B is retried after a lost acknowledgement, the retry reuses the exact same job_id.
+Atomic Check-and-Record Rule: Store processed job_ids in a persistent table with a UNIQUE constraint. When a job arrives, check and record its job_id in a single atomic transaction:
+  - If job_id is NOT yet recorded: insert it atomically, execute job B once, save the result, and return the acknowledgement.
+  - If job_id ALREADY exists: skip execution so B is not applied twice, and immediately return the previously saved acknowledgement.
